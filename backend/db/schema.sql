@@ -12,8 +12,8 @@ CREATE TABLE students (
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     program VARCHAR(255) NOT NULL,
-    enrollment_year TIMESTAMP DEFAULT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    enrollment_year TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabla teachers ● teachers(id, name, email)
@@ -21,7 +21,7 @@ CREATE TABLE teachers (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabla courses ● courses(id, code, name, credits)
@@ -53,18 +53,18 @@ CREATE TABLE enrollment (
 -- Tabla grades ● grades(id, enrollment_id, partial1, partial2, final)
 CREATE TABLE grades (
     id SERIAL PRIMARY KEY,
-    enrolled_id INTEGER NOT NULL REFERENCES enrollment(id) ON DELETE RESTRICT,
+    enrollment_id INTEGER NOT NULL REFERENCES enrollment(id) ON DELETE RESTRICT,
     partial1 DECIMAL(10, 2) NOT NULL CHECK (partial1 >= 0),
     partial2 DECIMAL(10, 2) NOT NULL CHECK (partial2 >= 0),
-    final DECIMAL(10, 2) NOT NULL CHECK (final >= 0),
+    final DECIMAL(10, 2) NOT NULL CHECK (final >= 0)
 );
 
 -- Tabla attendance ● attendance(id, enrollment_id, date, present)
 CREATE TABLE attendance (
     id SERIAL PRIMARY KEY,
-    enrolled_id INTEGER NOT NULL REFERENCES enrollment(id) ON DELETE RESTRICT,
+    enrollment_id INTEGER NOT NULL REFERENCES enrollment(id) ON DELETE RESTRICT,
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     present VARCHAR(20) NOT NULL DEFAULT 'Ausente' 
-        CHECK (status IN ('Presente', 'Ausente', 'Justificado', 'Retardo')),
+        CHECK (present IN ('Presente', 'Ausente', 'Justificado', 'Retardo'))
 );
 

@@ -16,148 +16,125 @@
 
 CREATE OR REPLACE VIEW vw_attendance_by_group AS
 SELECT 
-    g.term AS grupo,
-    COUNT(a.id) AS total_dias,
-    COALESCE(SUM(CASE WHEN present = 'Presente' OR 'Justificado' THEN 1 ELSE 0 ), 0) AS asistencias_totales,
+    g.id AS group_id,
+    g.term AS term,
+    COUNT(a.id) AS total_registros,
+    SUM(CASE WHEN a.present IN ('Presente', 'Justificado') THEN 1 ELSE 0 END) AS asistencias_totales,
     ROUND(
-        COALESCE(SUM(CASE WHEN present = 'Presente' OR 'Justificado' THEN 1 ELSE 0 ) / NULLIF(COUNT(DISTINCT a.id), 0), 0), 2
-        ) AS asistencia_promedio
+        CAST(SUM(CASE WHEN a.present IN ('Presente', 'Justificado') THEN 1 ELSE 0 END) AS NUMERIC) / 
+        NULLIF(COUNT(a.id), 0) * 100, 2
+    ) AS asistencia_promedio_porcentaje
 FROM groups g
 LEFT JOIN enrollment e ON g.id = e.group_id
 LEFT JOIN attendance a ON e.id = a.enrolled_id
-GROUP BY g,term, g.id;
-
+GROUP BY g.id, g.term;
 
 -- ============================================
--- VIEW_2 - Usuario con un gasto mayor a 1500, usuario premium
+-- VIEW_2 - Carga de trabajo
 -- ============================================
--- Qué devuelve: Resumen de usuarios con gastos mayores a 1500
--- Grain (qué representa una fila): Un usuario
--- Métricas: SUM y COUNT
--- Por qué usa GROUP BY/HAVING: GROUP BY, por nombre de usuario para poder obtener sus gastos sobre ese mismo usuario
--- Campos calculados: Gasto promedio sobre ordenes
--- 1–2 queries VERIFY para validar resultados
+-- Qué devuelve: Carga de trabajo por docente y periodo.
+-- Grain (qué representa una fila): Docente + periodo.
+-- Métricas: Total de grupos y total de alumnos atendidos.
+-- Por qué usa HAVING: Para filtrar docentes que tienen una carga significativa (más de 0 alumnos).
 -- ============================================
 
 CREATE OR REPLACE VIEW vw_teacher_load AS
 SELECT 
-    u.nombre AS usuario,
-    COUNT(o.id) AS total_ordenes,
-    COALESCE(SUM(o.total), 0) AS gasto_total,
+    t.nombre AS docente,
+    t.email,
+    g.term AS periodo,
+    COUNT(DISTINCT g.id) AS total_grupos,
+    COUNT(e.id) AS alumnos_totales,
+    ROUND(AVG(gr.final), 2) AS promedio_de_sus_grupos
+FROM teachers t
+JOIN groups g ON t.id = g.teacher_id
+LEFT JOIN enrollment e ON g.id = e.group_id
+LEFT JOIN grades gr ON e.id = gr.enrolled_id
+GROUP BY t.id, t.nombre, t.email, g.term
+HAVING COUNT(e.id) > 0;
+
+
+
+
+-- ============================================
+-- VIEW_3 - Rendimiento academico
+-- ============================================
+-- Qué devuelve: Rendimiento académico por curso y periodo.
+-- Grain (qué representa una fila): 1 fila por curso + periodo (term).
+-- Métricas: Promedio general y conteo de aprobados/reprobados.
+-- Campos calculados: Estatus de alerta basado en el % de reprobación.
+-- ============================================
+
+CREATE OR REPLACE VIEW vw_course_performance AS
+SELECT 
+    c.nombre AS curso,
+    g.term AS periodo,
+    ROUND(AVG((gr.partial1 + gr.partial2 + gr.final) / 3), 2) AS promedio_general,
+    COUNT(CASE WHEN gr.final >= 6 THEN 1 END) AS aprobados,
+    COUNT(CASE WHEN gr.final < 6 THEN 1 END) AS reprobados,
     CASE 
-        WHEN SUM(o.total) >  1500 THEN 'Premium'
-        ELSE 'Regular'
-    END AS categoria_cliente,
-    ROUND(
-        COALESCE(SUM(o.total) / NULLIF(COUNT(DISTINCT o.id), 0), 0), 2
-    ) AS gasto_promedio
-FROM usuarios u 
-LEFT JOIN ordenes o ON u.id = o.usuario_id
-GROUP BY u.id, u.nombre
-HAVING COALESCE(SUM(o.total), 0) > 1500
-ORDER BY COALESCE(SUM(o.total), 0) DESC;
-
-
--- VERIFY: Validar que el total y numero de ordenes coincida con el reporte
--- SELECT * FROM ordenes;
--- SELECT SUM(o.total) FROM ordenes o WHERE o.usuario_id = 1;
-
+        WHEN COUNT(CASE WHEN gr.final < 6 THEN 1 END) > (COUNT(gr.id) * 0.3) THEN 'ALTA REPROBACIÓN'
+        ELSE 'NORMAL'
+    END AS estatus_alerta
+FROM courses c
+JOIN groups g ON c.id = g.course_id
+JOIN enrollment e ON g.id = e.group_id
+JOIN grades gr ON e.id = gr.enrolled_id
+GROUP BY c.nombre, g.term;
 
 
 -- ============================================
--- VIEW_3 - Promedios y reprobados
+-- VIEW_4 - Alumnos con metricas debajo del estandar
 -- ============================================
--- Qué devuelve: Resumen de promedios y numero de reprobados por grado y curso
--- Grain (qué representa una fila): Un curso
+-- Qué devuelve: Listado de alumnos con métricas por debajo del estándar.
+-- Grain (qué representa una fila): Un Estudiante.
 -- Métricas: SUM y COUNT
--- Por qué usa GROUP BY/HAVING: GROUP BY, agrupado por course.
--- Campos calculados: Promedio por grupo
--- ============================================
-
-CREATE OR REPLACE VIEW vw_course_performance: AS
-SELECT 
-    p.nombre AS producto,
-    COUNT(od.producto_id) AS cantidad_ventas,
-    COALESCE(SUM(od.subtotal), 0) AS total_ventas,
-    ROUND(AVG(od.precio_unitario), 2) AS precio_promedio_venta
-FROM productos p
-INNER JOIN orden_detalles od ON p.id = od.producto_id
-GROUP BY p.nombre, p.id
-HAVING COUNT(od.id) > 5;
-
--- VERIFY: Validar que el producto si se vendio esa cantidad de veces y el total
--- SELECT od.producto_id, od.subtotal FROM orden_detalles;
--- SELECT SUM(od.subtotal) FROM orden_detalles od WHERE od.producto_id = 1;
-
-
-
--- ============================================
--- VIEW_4 - Gasto total por usuario (CTE) 
--- ============================================
--- Qué devuelve: Resumen del gasto total del usuario
--- Grain (qué representa una fila): Un usuario
--- Métricas: SUM y COUNT
--- Por qué usa GROUP BY/HAVING: GROUP BY, por el id de orden para tener la informacion de la orden en especifico
--- Campos calculados: ticket promedio
--- 1–2 queries VERIFY para validar resultados
+-- CTE: Calcula primero el desempeño antes de filtrar el riesgo.
 -- ============================================
 
 
-CREATE OR REPLACE VIEW view_gasto_total_por_usuario_cte AS
-WITH VentasTotales AS (
-SELECT 
-    o.usuario_id,
-    COUNT(o.id) AS cantidad_ordenes,
-    ROUND(AVG(o.total), 2) AS gasto_promedio,
-    SUM(o.total) AS total_acumulado
-FROM ordenes o
-GROUP BY o.usuario_id
+CREATE OR REPLACE VIEW vw_students_at_risk AS
+WITH student_performance AS (
+    SELECT 
+        s.id,
+        s.nombre,
+        s.email,
+        AVG(gr.final) AS promedio_final,
+        (CAST(SUM(CASE WHEN a.present = 'Presente' THEN 1 ELSE 0 END) AS NUMERIC) / 
+         NULLIF(COUNT(a.id), 0)) * 100 AS porcentaje_asistencia
+    FROM students s
+    JOIN enrollment e ON s.id = e.student_id
+    LEFT JOIN grades gr ON e.id = gr.enrolled_id
+    LEFT JOIN attendance a ON e.id = a.enrolled_id
+    GROUP BY s.id, s.nombre, s.email
 )
-SELECT 
-    u.nombre AS cliente,
-    vt.total_acumulado,
-    vt.cantidad_ordenes
-FROM usuarios u 
-JOIN VentasTotales vt ON u.id = vt.usuario_id;
-
--- VERIFY: Validar que la suma de la vista coincida con la suma de la tabla original 
--- SELECT SUM(total) FROM ordenes;
--- SELECT * FROM ordenes;
+SELECT * FROM student_performance
+WHERE promedio_final < 7 OR porcentaje_asistencia < 80;
 
 
 
 -- ============================================
--- VIEW_5 - Ranking de productos por categoria
+-- VIEW_5 - Top alumnos por carrera y periodo
 -- ============================================
--- Qué devuelve: Los productos más vendidos dentro de cada categoría con su ranking.
--- Grain (qué representa una fila): Un producto por categoria
+-- Qué devuelve: El top de alumnos por carrera y periodo.
+-- Grain (qué representa una fila): Estudiante por periodo.
 -- Métricas: SUM y COUNT
--- Por qué usa GROUP BY/HAVING: GROUP BY, para agruparlo sobre el nombre de la categoria
--- Campos calculados: porcentaje de contribucion
--- Por qué usa Window Function: Para clasificar productos dentro de grupos (categorías)
---                              sin colapsar las filas en un solo grupo general.
--- 1–2 queries VERIFY para validar resultados
+-- Window Function: RANK() particionado por programa.
 -- ============================================
 
-CREATE OR REPLACE VIEW view_ranking_productos_por_categoria AS
-SELECT 
-    c.nombre AS categoria,
-    p.nombre AS producto,
-    SUM(od.subtotal) AS ingresos_producto,
-    -- Window Function: Clasifica productos por ingresos dentro de cada categoría 
-    DENSE_RANK() OVER(
-        PARTITION BY c.id 
-        ORDER BY SUM(od.subtotal) DESC
-    ) AS ranking_en_categoria,
-    ROUND(
-        (SUM(od.subtotal) * 100.0) / SUM(SUM(od.subtotal)) OVER(PARTITION BY c.id), 
-        2
-    ) AS porcentaje_contribucion_categoria
-FROM categorias c
-JOIN productos p ON c.id = p.categoria_id
-JOIN orden_detalles od ON p.id = od.producto_id
-GROUP BY c.id, c.nombre, p.id, p.nombre;
 
--- VERIFY: Comprobar que el ranking 1 sea efectivamente el de mayor ingreso en la categoría
--- SELECT * FROM orden_detalles;
--- SELECT * FROM view_ranking_productos_por_categoria WHERE ranking_en_categoria = 1;
+CREATE OR REPLACE VIEW vw_rank_students AS
+SELECT 
+    s.nombre AS alumno,
+    s.program AS carrera,
+    g.term AS periodo,
+    ROUND(AVG(gr.final), 2) AS promedio,
+    RANK() OVER (
+        PARTITION BY s.program, g.term 
+        ORDER BY AVG(gr.final) DESC
+    ) AS posicion_ranking
+FROM students s
+JOIN enrollment e ON s.id = e.student_id
+JOIN groups g ON e.group_id = g.id
+JOIN grades gr ON e.id = gr.enrolled_id
+GROUP BY s.id, s.nombre, s.program, g.term;
