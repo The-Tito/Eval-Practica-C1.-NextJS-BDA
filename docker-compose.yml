@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    container_name: db_eval-practica_web
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db:/scripts:ro
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+      - ./backend/db/migrate.sql:/docker-entrypoint-initdb.d/03_migrate.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_lab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL} # Se utilizara el usuario creado con los permisos limitados.
+    depends_on:
+      db:
+        condition: service_healthy # Espera a que la DB esté lista para recibir conexiones
+
+volumes:
+  postgres_data:
