@@ -30,7 +30,7 @@ export default function Home() {
   ];
 
   return (
-    <main className="p-10 bg-gray-50 min-h-screen">
+    <main className="p-10 bg-white min-h-screen">
       <h1 className="text-4xl font-extrabold mb-8 text-center text-gray-800">
         Dashboard de Reportes
       </h1>

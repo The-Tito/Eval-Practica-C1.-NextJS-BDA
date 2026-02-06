@@ -9,7 +9,7 @@ export async function getAttendanceByGroup() {
             group_id,
             term,
             total_registros,
-            asistencia_promedio_porcentaje AS asistencia_promedio,
+            asistencia_promedio_porcentaje AS asistencia_promedio
             FROM vw_attendance_by_group
         `;
     return data;
@@ -38,8 +38,8 @@ export async function getTeacherLoad(params: {
       periodo,
       total_grupos,
       alumnos_totales,
-      promedio_de_grupos,
-       FROM w_teacher_load
+      promedio_de_sus_grupos AS promedio_de_grupos
+       FROM vw_teacher_load
       WHERE docente ILIKE ${"%" + teacher + "%"}
       ORDER BY promedio_de_grupos DESC
       LIMIT ${limit}
@@ -60,7 +60,8 @@ export async function getCoursePerformance() {
             periodo,
             promedio_general,
             aprobados,
-            reporbados,
+            aprobados,
+            reprobados,
             estatus_alerta
             FROM vw_course_performance
         `;
@@ -89,7 +90,8 @@ export async function getStudentsPerformance(params: {
       nombre,
       email,
       promedio_final,
-      procentaje_asistencia,
+      promedio_final,
+      porcentaje_asistencia
        FROM vw_students_at_risk
       WHERE nombre ILIKE ${"%" + student + "%"}
       ORDER BY promedio_final DESC

@@ -26,7 +26,7 @@ SELECT
     ) AS asistencia_promedio_porcentaje
 FROM groups g
 LEFT JOIN enrollment e ON g.id = e.group_id
-LEFT JOIN attendance a ON e.id = a.enrolled_id
+LEFT JOIN attendance a ON e.id = a.enrollment_id
 GROUP BY g.id, g.term;
 
 -- ============================================
@@ -49,7 +49,7 @@ SELECT
 FROM teachers t
 JOIN groups g ON t.id = g.teacher_id
 LEFT JOIN enrollment e ON g.id = e.group_id
-LEFT JOIN grades gr ON e.id = gr.enrolled_id
+LEFT JOIN grades gr ON e.id = gr.enrollment_id
 GROUP BY t.id, t.nombre, t.email, g.term
 HAVING COUNT(e.id) > 0;
 
@@ -79,7 +79,7 @@ SELECT
 FROM courses c
 JOIN groups g ON c.id = g.course_id
 JOIN enrollment e ON g.id = e.group_id
-JOIN grades gr ON e.id = gr.enrolled_id
+JOIN grades gr ON e.id = gr.enrollment_id
 GROUP BY c.nombre, g.term;
 
 
@@ -104,8 +104,8 @@ WITH student_performance AS (
          NULLIF(COUNT(a.id), 0)) * 100 AS porcentaje_asistencia
     FROM students s
     JOIN enrollment e ON s.id = e.student_id
-    LEFT JOIN grades gr ON e.id = gr.enrolled_id
-    LEFT JOIN attendance a ON e.id = a.enrolled_id
+    LEFT JOIN grades gr ON e.id = gr.enrollment_id
+    LEFT JOIN attendance a ON e.id = a.enrollment_id
     GROUP BY s.id, s.nombre, s.email
 )
 SELECT * FROM student_performance
@@ -136,5 +136,5 @@ SELECT
 FROM students s
 JOIN enrollment e ON s.id = e.student_id
 JOIN groups g ON e.group_id = g.id
-JOIN grades gr ON e.id = gr.enrolled_id
+JOIN grades gr ON e.id = gr.enrollment_id
 GROUP BY s.id, s.nombre, s.program, g.term;
