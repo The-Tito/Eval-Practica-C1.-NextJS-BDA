@@ -23,11 +23,11 @@ INSERT INTO courses (code, nombre, credits) VALUES
 
 -- 3. Grupos (Distribución de carga para Reporte 2)
 INSERT INTO groups (course_id, teacher_id, term) VALUES
-(1, 1, '2024-1'), (2, 1, '2024-1'), -- Juan tiene 2 grupos
-(2, 2, '2024-1'), (3, 2, '2024-1'), -- Maria tiene 2 grupos
-(3, 3, '2024-1'), (1, 4, '2024-1'), 
-(2, 5, '2024-1'), (4, 6, '2024-1'), 
-(1, 7, '2024-1'), (2, 8, '2024-1');
+(1, 1, 202401), (2, 1, 202401), 
+(2, 2, 202401), (3, 2, 202401), 
+(3, 3, 202401), (1, 4, 202401), 
+(2, 5, 202401), (4, 6, 202401), 
+(1, 7, 202401), (2, 8, 202401);
 
 -- 4. Estudiantes (Mínimo 8 para probar paginación en Reporte 4)
 INSERT INTO students (nombre, email, program, enrollment_year) VALUES
