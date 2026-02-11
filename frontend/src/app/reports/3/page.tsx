@@ -4,14 +4,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function Reporte3Page() {
-  const data = await getCoursePerformance();
-
-  // Cálculo de KPI: Promedio general de todos los cursos
-  const promedioGeneral =
-    data.length > 0
-      ? data.reduce((acc, curr) => acc + Number(curr.promedio_general), 0) /
-        data.length
-      : 0;
+  const { data, promedioGeneral } = await getCoursePerformance();
 
   return (
     <div className="max-w-6xl mx-auto p-6">

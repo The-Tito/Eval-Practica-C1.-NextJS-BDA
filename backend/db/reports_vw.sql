@@ -28,7 +28,8 @@ SELECT
 FROM groups g
 LEFT JOIN enrollment e ON g.id = e.group_id
 LEFT JOIN attendance a ON e.id = a.enrollment_id
-GROUP BY g.id, g.term;
+GROUP BY g.id, g.term
+ORDER BY group_id ASC;
 
 -- ============================================
 -- VIEW_2 - Carga de trabajo docente
@@ -55,7 +56,8 @@ JOIN groups g ON t.id = g.teacher_id
 LEFT JOIN enrollment e ON g.id = e.group_id
 LEFT JOIN grades gr ON e.id = gr.enrollment_id
 GROUP BY t.id, t.nombre, t.email, g.term
-HAVING COUNT(e.id) > 0;
+HAVING COUNT(e.id) > 0
+ORDER BY docente ASC;
 
 -- ============================================
 -- VIEW_3 - Rendimiento académico por curso
@@ -84,7 +86,8 @@ FROM courses c
 JOIN groups g ON c.id = g.course_id
 JOIN enrollment e ON g.id = e.group_id
 JOIN grades gr ON e.id = gr.enrollment_id
-GROUP BY c.nombre, g.term;
+GROUP BY c.nombre, g.term
+ORDER BY curso ASC;
 
 -- ============================================
 -- VIEW_4 - Alumnos en riesgo (CTE)
@@ -102,7 +105,7 @@ CREATE OR REPLACE VIEW vw_students_at_risk AS
 WITH student_performance AS (
     SELECT 
         s.id,
-        s.nombre,
+        s.nombre AS nombre,
         s.email,
         AVG(gr.final) AS promedio_final,
         (CAST(SUM(CASE WHEN a.present = 'Presente' THEN 1 ELSE 0 END) AS NUMERIC) / 
@@ -114,7 +117,8 @@ WITH student_performance AS (
     GROUP BY s.id, s.nombre, s.email
 )
 SELECT * FROM student_performance
-WHERE promedio_final < 7 OR porcentaje_asistencia < 80;
+WHERE promedio_final < 7 OR porcentaje_asistencia < 80
+ORDER BY nombre ASC;
 
 -- ============================================
 -- VIEW_5 - Ranking de alumnos (Window Function)
@@ -130,11 +134,11 @@ WHERE promedio_final < 7 OR porcentaje_asistencia < 80;
 
 CREATE OR REPLACE VIEW vw_rank_students AS
 SELECT 
-    s.nombre AS alumno,
     s.program AS carrera,
     g.term AS periodo,
+    s.nombre AS alumno,
     ROUND(AVG(gr.final), 2) AS promedio,
-    RANK() OVER (
+    DENSE_RANK() OVER (
         PARTITION BY s.program, g.term 
         ORDER BY AVG(gr.final) DESC
     ) AS posicion_ranking
@@ -142,4 +146,5 @@ FROM students s
 JOIN enrollment e ON s.id = e.student_id
 JOIN groups g ON e.group_id = g.id
 JOIN grades gr ON e.id = gr.enrollment_id
-GROUP BY s.id, s.nombre, s.program, g.term;
+GROUP BY s.program, g.term, s.id, s.nombre
+ORDER BY carrera ASC, periodo DESC, posicion_ranking ASC;

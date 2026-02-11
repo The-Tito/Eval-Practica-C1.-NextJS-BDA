@@ -6,12 +6,10 @@ export const dynamic = "force-dynamic";
 export default async function Reporte4Page(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // 1. Obtener parámetros de la URL
   const searchParams = await props.searchParams;
   const student = (searchParams.student as string) || "";
   const page = Number(searchParams.page) || 1;
 
-  // 2. Llamar al Server Action con filtros
   const data = await getStudentsPerformance({ student, page });
 
   return (

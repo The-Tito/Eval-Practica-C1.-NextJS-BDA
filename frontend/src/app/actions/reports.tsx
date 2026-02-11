@@ -1,6 +1,8 @@
 "use server";
 import sql from "@/lib/db";
+import { adapter } from "next/dist/server/web/adapter";
 import { z } from "zod";
+import { da } from "zod/locales";
 
 export async function getAttendanceByGroup() {
   try {
@@ -12,7 +14,16 @@ export async function getAttendanceByGroup() {
             asistencia_promedio_porcentaje AS asistencia_promedio
             FROM vw_attendance_by_group
         `;
-    return data;
+
+    const asistenciaGlobal =
+      data.length > 0
+        ? data.reduce(
+            (acc, curr) => acc + Number(curr.asistencia_promedio),
+            0,
+          ) / data.length
+        : 0;
+
+    return { data, asistenciaGlobal };
   } catch (error) {
     console.error("Error al obtener el reporte 1:", error);
     throw new Error("Error interno al cargar los datos.");
@@ -45,7 +56,11 @@ export async function getTeacherLoad(params: {
       LIMIT ${limit}
       OFFSET ${offset}
     `;
-    return data;
+    const totalAlumnos = data.reduce(
+      (acc, curr) => acc + Number(curr.alumnos_totales),
+      0,
+    );
+    return { totalAlumnos, data };
   } catch (error) {
     console.error("Error al obtener el reporte 2:", error);
     throw new Error("Error interno al cargar los datos.");
@@ -65,7 +80,12 @@ export async function getCoursePerformance() {
             estatus_alerta
             FROM vw_course_performance
         `;
-    return data;
+    const promedioGeneral =
+      data.length > 0
+        ? data.reduce((acc, curr) => acc + Number(curr.promedio_general), 0) /
+          data.length
+        : 0;
+    return { promedioGeneral, data };
   } catch (error) {
     console.error("Error al obtener el reporte 3:", error);
     throw new Error("Error interno al cargar los datos.");
@@ -105,15 +125,32 @@ export async function getStudentsPerformance(params: {
   }
 }
 
-export async function getRankingStudents() {
+export async function getRankingStudents(params?: { program?: string }) {
+  const program = params?.program || "";
   try {
     const data = await sql`
       SELECT * FROM vw_rank_students
-      ORDER BY alumno ASC, posicion_ranking ASC
+      WHERE carrera ILIKE ${"%" + program + "%"}
+      ORDER BY carrera ASC, periodo DESC, posicion_ranking ASC
     `;
-    return data;
+    // KPI: Mejor alumno (Rank 1)
+    const topStudent = data.length > 0 ? (data[0].alumno as string) : "N/A";
+
+    return { data, topStudent };
   } catch (error) {
     console.error("Error en Reporte 5:", error);
+    return { data: [], topStudent: "N/A" };
+  }
+}
+
+export async function getPrograms() {
+  try {
+    const data = await sql`
+      SELECT DISTINCT carrera FROM vw_rank_students ORDER BY carrera ASC
+    `;
+    return data.map((row) => row.carrera as string);
+  } catch (error) {
+    console.error("Error al obtener carreras:", error);
     return [];
   }
 }

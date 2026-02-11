@@ -3,14 +3,7 @@ import { getAttendanceByGroup } from "@/app/actions/reports";
 import Link from "next/link";
 
 export default async function Reporte1Page() {
-  const data = await getAttendanceByGroup();
-
-  // Cálculo de KPI: Promedio de asistencia global de todos los grupos
-  const asistenciaGlobal =
-    data.length > 0
-      ? data.reduce((acc, curr) => acc + Number(curr.asistencia_promedio), 0) /
-        data.length
-      : 0;
+  const { data, asistenciaGlobal } = await getAttendanceByGroup();
 
   return (
     <div className="max-w-6xl mx-auto p-6">

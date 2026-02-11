@@ -6,19 +6,13 @@ export const dynamic = "force-dynamic";
 export default async function Reporte2Page(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // 1. Extraer y normalizar parámetros de búsqueda (URL)
+  //  Extraer y normalizar parámetros de búsqueda (URL)
   const searchParams = await props.searchParams;
   const teacher = (searchParams.teacher as string) || "";
   const page = Number(searchParams.page) || 1;
 
-  // 2. Llamar al Server Action con los parámetros
-  const data = await getTeacherLoad({ teacher, page });
-
-  // 3. Cálculo de KPI: Total de alumnos atendidos en la página actual
-  const totalAlumnos = data.reduce(
-    (acc, curr) => acc + Number(curr.alumnos_totales),
-    0,
-  );
+  // Llamar al Server Action con los parámetros
+  const { totalAlumnos, data } = await getTeacherLoad({ teacher, page });
 
   return (
     <div className="max-w-6xl mx-auto p-6">

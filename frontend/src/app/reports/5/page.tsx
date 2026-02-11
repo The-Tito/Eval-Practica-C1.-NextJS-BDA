@@ -1,13 +1,18 @@
-import { getRankingStudents } from "@/app/actions/reports";
+import { getRankingStudents, getPrograms } from "@/app/actions/reports";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function Reporte5Page() {
-  const data = await getRankingStudents();
+export default async function Reporte5Page(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = await props.searchParams;
+  const program = (searchParams.program as string) || "";
 
-  // KPI: Mejor alumno (Rank 1)
-  const topStudent = data.length > 0 ? data[0].alumno : "N/A";
+  const [{ data, topStudent }, programs] = await Promise.all([
+    getRankingStudents({ program }),
+    getPrograms(),
+  ]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -28,6 +33,38 @@ export default async function Reporte5Page() {
           Excelencia).
         </p>
       </header>
+
+      {/* Filtro por Carrera (Tabs) */}
+      <div className="mb-8 border-b border-gray-200">
+        <nav
+          className="-mb-px flex space-x-8 overflow-x-auto"
+          aria-label="Tabs"
+        >
+          <Link
+            href="/reports/5"
+            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+              program === ""
+                ? "border-yellow-500 text-yellow-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Todas
+          </Link>
+          {programs.map((p) => (
+            <Link
+              key={p}
+              href={`/reports/5?program=${encodeURIComponent(p)}`}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                program === p
+                  ? "border-yellow-500 text-yellow-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {p}
+            </Link>
+          ))}
+        </nav>
+      </div>
 
       {/* KPI Destacado */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
