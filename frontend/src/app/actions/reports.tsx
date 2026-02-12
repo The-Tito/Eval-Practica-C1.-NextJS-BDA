@@ -1,8 +1,6 @@
 "use server";
 import sql from "@/lib/db";
-import { adapter } from "next/dist/server/web/adapter";
 import { z } from "zod";
-import { da } from "zod/locales";
 
 export async function getAttendanceByGroup() {
   try {

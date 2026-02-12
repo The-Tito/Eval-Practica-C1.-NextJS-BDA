@@ -6,12 +6,10 @@ export const dynamic = "force-dynamic";
 export default async function Reporte2Page(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  //  Extraer y normalizar parámetros de búsqueda (URL)
   const searchParams = await props.searchParams;
   const teacher = (searchParams.teacher as string) || "";
   const page = Number(searchParams.page) || 1;
 
-  // Llamar al Server Action con los parámetros
   const { totalAlumnos, data } = await getTeacherLoad({ teacher, page });
 
   return (
@@ -43,7 +41,6 @@ export default async function Reporte2Page(props: {
           defaultValue={teacher}
           className="border border-gray-300 p-2 rounded-lg w-full md:w-64 text-black bg-white focus:ring-2 focus:ring-purple-500 outline-none"
         />
-        {/* Reiniciamos a la página 1 en cada búsqueda nueva */}
         <input type="hidden" name="page" value="1" />
         <button
           type="submit"
